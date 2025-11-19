@@ -1,0 +1,39 @@
+# Vercel Ignore File
+# Files and directories that should not be uploaded to Vercel
+
+# Development files
+.git
+.github
+*.md
+!VERCEL_DEPLOYMENT.md
+
+# Test files
+backend/tests
+frontend/src/__tests__
+
+# Local development
+node_modules
+__pycache__
+*.pyc
+.pytest_cache
+coverage
+.coverage
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts (will be rebuilt)
+frontend/dist
+frontend/node_modules
+
+# Documentation (not needed for deployment)
+docs/
+CONTRIBUTING.md
+CONSOLIDATION_REVIEW.md
