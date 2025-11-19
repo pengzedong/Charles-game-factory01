@@ -1,141 +1,154 @@
-"""Tests for high scores endpoints."""
+"""
+Tests for score endpoints
+"""
+import pytest
 from fastapi.testclient import TestClient
 
 
-def test_get_empty_highscores(client: TestClient) -> None:
-    """Test getting high scores when none exist.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    response = client.get("/api/highscores")
+def test_create_score(client: TestClient, sample_score):
+    """Test creating a new score"""
+    response = client.post("/api/scores", json=sample_score)
 
     assert response.status_code == 200
-    assert response.json() == []
+    data = response.json()
+
+    assert "id" in data
+    assert "timestamp" in data
+    assert data["player_name"] == sample_score["player_name"]
+    assert data["score"] == sample_score["score"]
+    assert data["level"] == sample_score["level"]
 
 
-def test_create_highscore(client: TestClient) -> None:
-    """Test creating a new high score.
+def test_create_multiple_scores(client: TestClient):
+    """Test creating multiple scores"""
+    scores = [
+        {"player_name": "Player1", "score": 500, "level": 3},
+        {"player_name": "Player2", "score": 1000, "level": 5},
+        {"player_name": "Player3", "score": 750, "level": 4}
+    ]
 
-    Args:
-        client: FastAPI test client fixture.
-    """
-    score_data = {
-        "playerName": "Alice",
-        "score": 12345
+    for score_data in scores:
+        response = client.post("/api/scores", json=score_data)
+        assert response.status_code == 200
+
+
+def test_get_scores_empty(client: TestClient):
+    """Test getting scores when none exist"""
+    response = client.get("/api/scores")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) == 0
+
+
+def test_get_scores_returns_list(client: TestClient, sample_score):
+    """Test that GET scores returns a list"""
+    # Create a score first
+    client.post("/api/scores", json=sample_score)
+
+    response = client.get("/api/scores")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+
+
+def test_get_scores_sorted_descending(client: TestClient):
+    """Test that scores are sorted by score in descending order"""
+    scores = [
+        {"player_name": "Player1", "score": 500, "level": 3},
+        {"player_name": "Player2", "score": 1500, "level": 7},
+        {"player_name": "Player3", "score": 1000, "level": 5},
+        {"player_name": "Player4", "score": 2000, "level": 10},
+        {"player_name": "Player5", "score": 750, "level": 4}
+    ]
+
+    # Create all scores
+    for score_data in scores:
+        client.post("/api/scores", json=score_data)
+
+    # Get scores
+    response = client.get("/api/scores")
+    data = response.json()
+
+    assert response.status_code == 200
+    assert len(data) == 5
+
+    # Verify they are sorted in descending order
+    assert data[0]["score"] == 2000
+    assert data[1]["score"] == 1500
+    assert data[2]["score"] == 1000
+    assert data[3]["score"] == 750
+    assert data[4]["score"] == 500
+
+    # Verify the order is strictly descending
+    for i in range(len(data) - 1):
+        assert data[i]["score"] >= data[i + 1]["score"]
+
+
+def test_get_scores_with_limit(client: TestClient):
+    """Test that limit parameter works correctly"""
+    # Create 15 scores
+    for i in range(15):
+        score_data = {
+            "player_name": f"Player{i}",
+            "score": (i + 1) * 100,
+            "level": i + 1
+        }
+        client.post("/api/scores", json=score_data)
+
+    # Get top 5 scores
+    response = client.get("/api/scores?limit=5")
+    data = response.json()
+
+    assert response.status_code == 200
+    assert len(data) == 5
+
+    # Default limit is 10
+    response = client.get("/api/scores")
+    data = response.json()
+    assert len(data) == 10
+
+
+def test_score_has_required_fields(client: TestClient, sample_score):
+    """Test that created score has all required fields"""
+    response = client.post("/api/scores", json=sample_score)
+    data = response.json()
+
+    required_fields = ["id", "player_name", "score", "level", "timestamp"]
+    for field in required_fields:
+        assert field in data
+
+
+def test_score_validation(client: TestClient):
+    """Test that score validation works"""
+    # Missing required field
+    invalid_score = {
+        "player_name": "TestPlayer",
+        "score": 1000
+        # Missing 'level'
     }
 
-    response = client.post("/api/highscores", json=score_data)
-
-    assert response.status_code == 201
-
-    data = response.json()
-    assert data["success"] is True
-    assert "data" in data
-    assert data["data"]["playerName"] == "Alice"
-    assert data["data"]["score"] == 12345
-    assert "id" in data["data"]
-    assert "timestamp" in data["data"]
+    response = client.post("/api/scores", json=invalid_score)
+    assert response.status_code == 422  # Validation error
 
 
-def test_get_highscores_sorted(client: TestClient) -> None:
-    """Test that high scores are returned sorted by score descending.
+def test_clear_scores(client: TestClient, sample_score):
+    """Test clearing all scores"""
+    # Create some scores
+    client.post("/api/scores", json=sample_score)
+    client.post("/api/scores", json=sample_score)
 
-    Args:
-        client: FastAPI test client fixture.
-    """
-    # Add multiple scores
-    scores = [
-        {"playerName": "Alice", "score": 100},
-        {"playerName": "Bob", "score": 500},
-        {"playerName": "Charlie", "score": 300},
-    ]
+    # Verify scores exist
+    response = client.get("/api/scores")
+    assert len(response.json()) == 2
 
-    for score in scores:
-        client.post("/api/highscores", json=score)
-
-    response = client.get("/api/highscores")
-
+    # Clear scores
+    response = client.delete("/api/scores")
     assert response.status_code == 200
 
-    data = response.json()
-    assert len(data) == 3
-    assert data[0]["score"] == 500  # Bob
-    assert data[0]["rank"] == 1
-    assert data[1]["score"] == 300  # Charlie
-    assert data[1]["rank"] == 2
-    assert data[2]["score"] == 100  # Alice
-    assert data[2]["rank"] == 3
-
-
-def test_get_highscores_with_limit(client: TestClient) -> None:
-    """Test getting high scores with limit parameter.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    # Add multiple scores
-    for i in range(5):
-        client.post("/api/highscores", json={"playerName": f"Player{i}", "score": i * 100})
-
-    response = client.get("/api/highscores?limit=3")
-
-    assert response.status_code == 200
-
-    data = response.json()
-    assert len(data) == 3
-
-
-def test_get_top_score(client: TestClient) -> None:
-    """Test getting the top score.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    # Add multiple scores
-    scores = [
-        {"playerName": "Alice", "score": 100},
-        {"playerName": "Bob", "score": 500},
-        {"playerName": "Charlie", "score": 300},
-    ]
-
-    for score in scores:
-        client.post("/api/highscores", json=score)
-
-    response = client.get("/api/highscores/top/1")
-
-    assert response.status_code == 200
-
-    data = response.json()
-    assert data["playerName"] == "Bob"
-    assert data["score"] == 500
-
-
-def test_get_top_score_empty(client: TestClient) -> None:
-    """Test getting top score when no scores exist.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    response = client.get("/api/highscores/top/1")
-
-    assert response.status_code == 404
-
-
-def test_create_highscore_validation(client: TestClient) -> None:
-    """Test high score validation.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    # Test negative score
-    response = client.post("/api/highscores", json={"playerName": "Test", "score": -1})
-    assert response.status_code == 422
-
-    # Test empty player name
-    response = client.post("/api/highscores", json={"playerName": "", "score": 100})
-    assert response.status_code == 422
-
-    # Test missing fields
-    response = client.post("/api/highscores", json={"playerName": "Test"})
-    assert response.status_code == 422
+    # Verify scores are cleared
+    response = client.get("/api/scores")
+    assert len(response.json()) == 0

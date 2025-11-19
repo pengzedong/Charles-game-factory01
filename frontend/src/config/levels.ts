@@ -1,131 +1,162 @@
 /**
- * Level configuration interface
+ * Level configuration for Key Dash Adventure
  */
+
 export interface LevelConfig {
-  level: number;
-  requiredScore: number;
-  obstacleSpawnInterval: number; // milliseconds
-  obstacleSpeed: number; // pixels per second
-  coinSpawnInterval: number; // milliseconds
-  coinSpeed: number; // pixels per second
-  obstacleSpawnChance: number; // 0-1
-  coinSpawnChance: number; // 0-1
+  id: number;
+  name: string;
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert';
+  timeLimit: number; // seconds
+  targetScore: number;
+  obstacles: {
+    type: string;
+    count: number;
+  }[];
+  collectibles: {
+    type: string;
+    count: number;
+    points: number;
+  }[];
 }
 
-/**
- * Configuration-driven level definitions
- * Game difficulty increases with each level
- */
-export const LEVELS: LevelConfig[] = [
+export const levels: LevelConfig[] = [
   {
-    level: 1,
-    requiredScore: 0,
-    obstacleSpawnInterval: 2000,
-    obstacleSpeed: 100,
-    coinSpawnInterval: 3000,
-    coinSpeed: 80,
-    obstacleSpawnChance: 0.7,
-    coinSpawnChance: 0.8,
+    id: 1,
+    name: 'Tutorial Valley',
+    difficulty: 'easy',
+    timeLimit: 60,
+    targetScore: 100,
+    obstacles: [
+      { type: 'rock', count: 5 },
+      { type: 'pit', count: 2 }
+    ],
+    collectibles: [
+      { type: 'coin', count: 10, points: 10 },
+      { type: 'gem', count: 2, points: 25 }
+    ]
   },
   {
-    level: 2,
-    requiredScore: 50,
-    obstacleSpawnInterval: 1800,
-    obstacleSpeed: 120,
-    coinSpawnInterval: 2800,
-    coinSpeed: 90,
-    obstacleSpawnChance: 0.75,
-    coinSpawnChance: 0.75,
+    id: 2,
+    name: 'Forest Path',
+    difficulty: 'easy',
+    timeLimit: 90,
+    targetScore: 200,
+    obstacles: [
+      { type: 'rock', count: 8 },
+      { type: 'pit', count: 4 },
+      { type: 'tree', count: 3 }
+    ],
+    collectibles: [
+      { type: 'coin', count: 15, points: 10 },
+      { type: 'gem', count: 4, points: 25 }
+    ]
   },
   {
-    level: 3,
-    requiredScore: 150,
-    obstacleSpawnInterval: 1600,
-    obstacleSpeed: 140,
-    coinSpawnInterval: 2600,
-    coinSpeed: 100,
-    obstacleSpawnChance: 0.8,
-    coinSpawnChance: 0.7,
+    id: 3,
+    name: 'Mountain Climb',
+    difficulty: 'medium',
+    timeLimit: 120,
+    targetScore: 350,
+    obstacles: [
+      { type: 'rock', count: 12 },
+      { type: 'pit', count: 6 },
+      { type: 'spike', count: 4 }
+    ],
+    collectibles: [
+      { type: 'coin', count: 20, points: 10 },
+      { type: 'gem', count: 6, points: 25 },
+      { type: 'star', count: 1, points: 100 }
+    ]
   },
   {
-    level: 4,
-    requiredScore: 300,
-    obstacleSpawnInterval: 1400,
-    obstacleSpeed: 160,
-    coinSpawnInterval: 2400,
-    coinSpeed: 110,
-    obstacleSpawnChance: 0.85,
-    coinSpawnChance: 0.65,
+    id: 4,
+    name: 'Desert Dash',
+    difficulty: 'medium',
+    timeLimit: 150,
+    targetScore: 500,
+    obstacles: [
+      { type: 'cactus', count: 10 },
+      { type: 'pit', count: 8 },
+      { type: 'spike', count: 6 }
+    ],
+    collectibles: [
+      { type: 'coin', count: 25, points: 10 },
+      { type: 'gem', count: 8, points: 25 },
+      { type: 'star', count: 2, points: 100 }
+    ]
   },
   {
-    level: 5,
-    requiredScore: 500,
-    obstacleSpawnInterval: 1200,
-    obstacleSpeed: 180,
-    coinSpawnInterval: 2200,
-    coinSpeed: 120,
-    obstacleSpawnChance: 0.9,
-    coinSpawnChance: 0.6,
+    id: 5,
+    name: 'Lava Cavern',
+    difficulty: 'hard',
+    timeLimit: 180,
+    targetScore: 750,
+    obstacles: [
+      { type: 'lava', count: 15 },
+      { type: 'pit', count: 10 },
+      { type: 'spike', count: 8 },
+      { type: 'boulder', count: 5 }
+    ],
+    collectibles: [
+      { type: 'coin', count: 30, points: 10 },
+      { type: 'gem', count: 12, points: 25 },
+      { type: 'star', count: 3, points: 100 }
+    ]
   },
   {
-    level: 6,
-    requiredScore: 750,
-    obstacleSpawnInterval: 1000,
-    obstacleSpeed: 200,
-    coinSpawnInterval: 2000,
-    coinSpeed: 130,
-    obstacleSpawnChance: 0.92,
-    coinSpawnChance: 0.55,
+    id: 6,
+    name: 'Ice Palace',
+    difficulty: 'hard',
+    timeLimit: 200,
+    targetScore: 1000,
+    obstacles: [
+      { type: 'ice-spike', count: 20 },
+      { type: 'pit', count: 12 },
+      { type: 'frozen-block', count: 10 }
+    ],
+    collectibles: [
+      { type: 'coin', count: 35, points: 10 },
+      { type: 'gem', count: 15, points: 25 },
+      { type: 'star', count: 4, points: 100 }
+    ]
   },
   {
-    level: 7,
-    requiredScore: 1000,
-    obstacleSpawnInterval: 900,
-    obstacleSpeed: 220,
-    coinSpawnInterval: 1900,
-    coinSpeed: 140,
-    obstacleSpawnChance: 0.94,
-    coinSpawnChance: 0.5,
-  },
-  {
-    level: 8,
-    requiredScore: 1500,
-    obstacleSpawnInterval: 800,
-    obstacleSpeed: 240,
-    coinSpawnInterval: 1800,
-    coinSpeed: 150,
-    obstacleSpawnChance: 0.95,
-    coinSpawnChance: 0.45,
-  },
+    id: 7,
+    name: 'Final Gauntlet',
+    difficulty: 'expert',
+    timeLimit: 240,
+    targetScore: 1500,
+    obstacles: [
+      { type: 'mixed', count: 30 },
+      { type: 'pit', count: 15 },
+      { type: 'spike', count: 12 },
+      { type: 'moving-platform', count: 8 }
+    ],
+    collectibles: [
+      { type: 'coin', count: 50, points: 10 },
+      { type: 'gem', count: 20, points: 25 },
+      { type: 'star', count: 5, points: 100 }
+    ]
+  }
 ];
 
 /**
- * Get level configuration by level number
+ * Get level by ID
  */
-export function getLevelConfig(level: number): LevelConfig {
-  // If level exceeds defined levels, return the last level with increased difficulty
-  if (level > LEVELS.length) {
-    const lastLevel = LEVELS[LEVELS.length - 1];
-    return {
-      ...lastLevel,
-      level,
-      requiredScore: lastLevel.requiredScore + (level - LEVELS.length) * 500,
-      obstacleSpawnInterval: Math.max(500, lastLevel.obstacleSpawnInterval - (level - LEVELS.length) * 50),
-      obstacleSpeed: lastLevel.obstacleSpeed + (level - LEVELS.length) * 20,
-      obstacleSpawnChance: Math.min(0.98, lastLevel.obstacleSpawnChance + (level - LEVELS.length) * 0.01),
-    };
-  }
-  return LEVELS[level - 1];
+export function getLevelById(id: number): LevelConfig | undefined {
+  return levels.find(level => level.id === id);
 }
 
 /**
- * Determine which level the player should be on based on score
+ * Get levels by difficulty
  */
-export function getLevelForScore(score: number): number {
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (score >= LEVELS[i].requiredScore) {
-      return LEVELS[i].level;
-    }
-  }
-  return 1;
+export function getLevelsByDifficulty(difficulty: LevelConfig['difficulty']): LevelConfig[] {
+  return levels.filter(level => level.difficulty === difficulty);
+}
+
+/**
+ * Get total number of levels
+ */
+export function getTotalLevels(): number {
+  return levels.length;
 }

@@ -1,1 +1,1 @@
-"""Tests for the backend API."""
+# Empty file to make tests a package

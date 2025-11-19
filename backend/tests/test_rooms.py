@@ -1,263 +1,232 @@
-"""Tests for game rooms endpoints."""
+"""
+Tests for multiplayer room endpoints
+"""
+import pytest
 from fastapi.testclient import TestClient
 
 
-def test_get_empty_rooms(client: TestClient) -> None:
-    """Test getting rooms when none exist.
+def test_create_room(client: TestClient, sample_room):
+    """Test creating a new room"""
+    response = client.post("/api/rooms", json=sample_room)
 
-    Args:
-        client: FastAPI test client fixture.
-    """
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "id" in data
+    assert data["room_name"] == sample_room["room_name"]
+    assert data["max_players"] == sample_room["max_players"]
+    assert data["players"] == []
+    assert data["status"] == "waiting"
+    assert "created_at" in data
+
+
+def test_get_rooms_empty(client: TestClient):
+    """Test getting rooms when none exist"""
     response = client.get("/api/rooms")
 
     assert response.status_code == 200
-    assert response.json() == []
-
-
-def test_create_room(client: TestClient) -> None:
-    """Test creating a new room.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    room_data = {
-        "name": "Room 1",
-        "max_players": 4
-    }
-
-    response = client.post("/api/rooms", json=room_data)
-
-    assert response.status_code == 201
-
     data = response.json()
-    assert data["success"] is True
-    assert "data" in data
-    assert data["data"]["name"] == "Room 1"
-    assert data["data"]["maxPlayers"] == 4
-    assert "id" in data["data"]
-    assert data["data"]["players"] == []
-    assert data["data"]["isActive"] is True
+    assert isinstance(data, list)
+    assert len(data) == 0
 
 
-def test_create_room_default_max_players(client: TestClient) -> None:
-    """Test creating a room with default max players.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    room_data = {"name": "Default Room"}
-
-    response = client.post("/api/rooms", json=room_data)
-
-    assert response.status_code == 201
-
-    data = response.json()
-    assert data["data"]["maxPlayers"] == 4  # Default value
-
-
-def test_get_rooms(client: TestClient) -> None:
-    """Test getting all rooms.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    # Create multiple rooms
-    room_names = ["Room 1", "Room 2", "Room 3"]
-    for name in room_names:
-        client.post("/api/rooms", json={"name": name})
+def test_get_rooms(client: TestClient, sample_room):
+    """Test getting all rooms"""
+    # Create some rooms
+    client.post("/api/rooms", json=sample_room)
+    client.post("/api/rooms", json={"room_name": "Room 2", "max_players": 2})
 
     response = client.get("/api/rooms")
 
     assert response.status_code == 200
-
     data = response.json()
-    assert len(data) == 3
+    assert len(data) == 2
 
 
-def test_get_room_by_id(client: TestClient) -> None:
-    """Test getting a specific room by ID.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
+def test_get_room_by_id(client: TestClient, sample_room):
+    """Test getting a specific room by ID"""
     # Create a room
-    create_response = client.post("/api/rooms", json={"name": "Test Room"})
-    room_id = create_response.json()["data"]["id"]
+    create_response = client.post("/api/rooms", json=sample_room)
+    room_id = create_response.json()["id"]
 
     # Get the room
     response = client.get(f"/api/rooms/{room_id}")
 
     assert response.status_code == 200
-
     data = response.json()
     assert data["id"] == room_id
-    assert data["name"] == "Test Room"
+    assert data["room_name"] == sample_room["room_name"]
 
 
-def test_get_nonexistent_room(client: TestClient) -> None:
-    """Test getting a room that doesn't exist.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
+def test_get_nonexistent_room(client: TestClient):
+    """Test getting a room that doesn't exist"""
     response = client.get("/api/rooms/nonexistent-id")
 
     assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
 
 
-def test_join_room(client: TestClient) -> None:
-    """Test joining a room.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
+def test_join_room(client: TestClient, sample_room):
+    """Test joining a room"""
     # Create a room
-    create_response = client.post("/api/rooms", json={"name": "Test Room", "max_players": 4})
-    room_id = create_response.json()["data"]["id"]
+    create_response = client.post("/api/rooms", json=sample_room)
+    room_id = create_response.json()["id"]
 
     # Join the room
-    join_data = {"playerName": "Alice"}
-    response = client.post(f"/api/rooms/{room_id}/join", json=join_data)
+    player_data = {"player_name": "Player1"}
+    response = client.post(f"/api/rooms/{room_id}/join", json=player_data)
 
     assert response.status_code == 200
-
     data = response.json()
-    assert data["success"] is True
-    assert "Alice" in data["data"]["players"]
-    assert len(data["data"]["players"]) == 1
+    assert "Player1" in data["players"]
+    assert len(data["players"]) == 1
 
 
-def test_join_room_multiple_players(client: TestClient) -> None:
-    """Test multiple players joining a room.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
+def test_join_room_multiple_players(client: TestClient, sample_room):
+    """Test multiple players joining a room"""
     # Create a room
-    create_response = client.post("/api/rooms", json={"name": "Test Room", "max_players": 4})
-    room_id = create_response.json()["data"]["id"]
+    create_response = client.post("/api/rooms", json=sample_room)
+    room_id = create_response.json()["id"]
 
-    # Join with multiple players
-    players = ["Alice", "Bob", "Charlie"]
-    for player in players:
-        response = client.post(f"/api/rooms/{room_id}/join", json={"playerName": player})
+    # Multiple players join
+    players = ["Player1", "Player2", "Player3"]
+    for player_name in players:
+        player_data = {"player_name": player_name}
+        response = client.post(f"/api/rooms/{room_id}/join", json=player_data)
         assert response.status_code == 200
 
-    # Check room state
+    # Verify all players are in the room
     response = client.get(f"/api/rooms/{room_id}")
     data = response.json()
     assert len(data["players"]) == 3
-    assert all(player in data["players"] for player in players)
+    for player in players:
+        assert player in data["players"]
 
 
-def test_join_full_room(client: TestClient) -> None:
-    """Test joining a room that is full.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
+def test_join_full_room(client: TestClient):
+    """Test that joining a full room fails"""
     # Create a room with max 2 players
-    create_response = client.post("/api/rooms", json={"name": "Small Room", "max_players": 2})
-    room_id = create_response.json()["data"]["id"]
+    room_data = {"room_name": "Small Room", "max_players": 2}
+    create_response = client.post("/api/rooms", json=room_data)
+    room_id = create_response.json()["id"]
 
     # Fill the room
-    client.post(f"/api/rooms/{room_id}/join", json={"playerName": "Alice"})
-    client.post(f"/api/rooms/{room_id}/join", json={"playerName": "Bob"})
+    client.post(f"/api/rooms/{room_id}/join", json={"player_name": "Player1"})
+    client.post(f"/api/rooms/{room_id}/join", json={"player_name": "Player2"})
 
-    # Try to join when full
-    response = client.post(f"/api/rooms/{room_id}/join", json={"playerName": "Charlie"})
+    # Try to join full room
+    response = client.post(f"/api/rooms/{room_id}/join", json={"player_name": "Player3"})
 
     assert response.status_code == 400
     assert "full" in response.json()["detail"].lower()
 
 
-def test_join_room_duplicate_player(client: TestClient) -> None:
-    """Test that a player cannot join the same room twice.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
+def test_join_room_duplicate_player(client: TestClient, sample_room):
+    """Test that the same player cannot join twice"""
     # Create a room
-    create_response = client.post("/api/rooms", json={"name": "Test Room"})
-    room_id = create_response.json()["data"]["id"]
+    create_response = client.post("/api/rooms", json=sample_room)
+    room_id = create_response.json()["id"]
 
-    # Join the room
-    client.post(f"/api/rooms/{room_id}/join", json={"playerName": "Alice"})
+    # Join once
+    player_data = {"player_name": "Player1"}
+    response = client.post(f"/api/rooms/{room_id}/join", json=player_data)
+    assert response.status_code == 200
 
     # Try to join again
-    response = client.post(f"/api/rooms/{room_id}/join", json={"playerName": "Alice"})
+    response = client.post(f"/api/rooms/{room_id}/join", json=player_data)
 
     assert response.status_code == 400
     assert "already" in response.json()["detail"].lower()
 
 
-def test_join_nonexistent_room(client: TestClient) -> None:
-    """Test joining a room that doesn't exist.
+def test_room_status_changes_when_full(client: TestClient):
+    """Test that room status changes to 'playing' when full"""
+    # Create a room with max 2 players
+    room_data = {"room_name": "Small Room", "max_players": 2}
+    create_response = client.post("/api/rooms", json=room_data)
+    room_id = create_response.json()["id"]
 
-    Args:
-        client: FastAPI test client fixture.
-    """
-    response = client.post("/api/rooms/nonexistent-id/join", json={"playerName": "Alice"})
+    # Initially status should be 'waiting'
+    response = client.get(f"/api/rooms/{room_id}")
+    assert response.json()["status"] == "waiting"
 
-    assert response.status_code == 400
+    # Add first player
+    client.post(f"/api/rooms/{room_id}/join", json={"player_name": "Player1"})
+    response = client.get(f"/api/rooms/{room_id}")
+    assert response.json()["status"] == "waiting"
 
-
-def test_leave_room(client: TestClient) -> None:
-    """Test leaving a room.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    # Create a room and join
-    create_response = client.post("/api/rooms", json={"name": "Test Room"})
-    room_id = create_response.json()["data"]["id"]
-    client.post(f"/api/rooms/{room_id}/join", json={"playerName": "Alice"})
-
-    # Leave the room
-    response = client.post(f"/api/rooms/{room_id}/leave", json={"playerName": "Alice"})
-
-    assert response.status_code == 200
-
-    data = response.json()
-    assert data["success"] is True
-    assert "Alice" not in data["data"]["players"]
+    # Add second player (room becomes full)
+    client.post(f"/api/rooms/{room_id}/join", json={"player_name": "Player2"})
+    response = client.get(f"/api/rooms/{room_id}")
+    assert response.json()["status"] == "playing"
 
 
-def test_delete_room(client: TestClient) -> None:
-    """Test deleting a room.
+def test_join_nonexistent_room(client: TestClient):
+    """Test joining a room that doesn't exist"""
+    response = client.post("/api/rooms/nonexistent-id/join", json={"player_name": "Player1"})
 
-    Args:
-        client: FastAPI test client fixture.
-    """
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_delete_room(client: TestClient, sample_room):
+    """Test deleting a room"""
     # Create a room
-    create_response = client.post("/api/rooms", json={"name": "Test Room"})
-    room_id = create_response.json()["data"]["id"]
+    create_response = client.post("/api/rooms", json=sample_room)
+    room_id = create_response.json()["id"]
 
     # Delete the room
     response = client.delete(f"/api/rooms/{room_id}")
-
     assert response.status_code == 200
-    assert response.json()["success"] is True
 
-    # Verify it's deleted
-    get_response = client.get(f"/api/rooms/{room_id}")
-    assert get_response.status_code == 404
+    # Verify room is deleted
+    response = client.get(f"/api/rooms/{room_id}")
+    assert response.status_code == 404
 
 
-def test_create_room_validation(client: TestClient) -> None:
-    """Test room creation validation.
+def test_clear_rooms(client: TestClient, sample_room):
+    """Test clearing all rooms"""
+    # Create some rooms
+    client.post("/api/rooms", json=sample_room)
+    client.post("/api/rooms", json=sample_room)
 
-    Args:
-        client: FastAPI test client fixture.
-    """
-    # Test empty name
-    response = client.post("/api/rooms", json={"name": ""})
-    assert response.status_code == 422
+    # Verify rooms exist
+    response = client.get("/api/rooms")
+    assert len(response.json()) == 2
 
-    # Test invalid max_players (too low)
-    response = client.post("/api/rooms", json={"name": "Test", "max_players": 1})
-    assert response.status_code == 422
+    # Clear rooms
+    response = client.delete("/api/rooms")
+    assert response.status_code == 200
 
-    # Test invalid max_players (too high)
-    response = client.post("/api/rooms", json={"name": "Test", "max_players": 20})
-    assert response.status_code == 422
+    # Verify rooms are cleared
+    response = client.get("/api/rooms")
+    assert len(response.json()) == 0
+
+
+def test_room_state_consistency(client: TestClient, sample_room):
+    """Test that room state remains consistent through operations"""
+    # Create a room
+    create_response = client.post("/api/rooms", json=sample_room)
+    room_id = create_response.json()["id"]
+
+    # Add players
+    client.post(f"/api/rooms/{room_id}/join", json={"player_name": "Player1"})
+    client.post(f"/api/rooms/{room_id}/join", json={"player_name": "Player2"})
+
+    # Get room state
+    response = client.get(f"/api/rooms/{room_id}")
+    room_data = response.json()
+
+    # Verify consistency
+    assert room_data["id"] == room_id
+    assert room_data["room_name"] == sample_room["room_name"]
+    assert len(room_data["players"]) == 2
+    assert "Player1" in room_data["players"]
+    assert "Player2" in room_data["players"]
+    assert room_data["max_players"] == sample_room["max_players"]
+
+    # State should be consistent in list view too
+    response = client.get("/api/rooms")
+    all_rooms = response.json()
+    matching_room = next(r for r in all_rooms if r["id"] == room_id)
+    assert matching_room == room_data
