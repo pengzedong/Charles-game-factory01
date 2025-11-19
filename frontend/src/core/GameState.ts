@@ -1,82 +1,150 @@
+import { eventBus, GameEvents } from './Events';
+
 /**
- * GameState - Manages the game state including score, level, and persistence
+ * GameState - Centralised state container for score, level and session flags
  */
 export class GameState {
-  private score: number = 0;
-  private level: number = 1;
-  private bestScore: number = 0;
+  private static instance: GameState | null = null;
+
+  private score = 0;
+  private level = 1;
+  private bestScoreValue = 0;
+  private paused = false;
+  private hasGameEnded = false;
   private readonly BEST_SCORE_KEY = 'key-dash-adventure-best-score';
 
-  constructor() {
+  constructor(registerAsSingleton = true) {
     this.loadBestScore();
+
+    if (registerAsSingleton) {
+      GameState.instance = this;
+    }
   }
 
   /**
-   * Initialize or reset the game state
+   * Access the shared singleton instance that gameplay scenes consume
+   */
+  static getInstance(): GameState {
+    if (!GameState.instance) {
+      GameState.instance = new GameState();
+    }
+    return GameState.instance;
+  }
+
+  /**
+   * Initialize a fresh run without touching best score persistence
    */
   initialize(startingLevel: number = 1): void {
     this.score = 0;
     this.level = startingLevel;
-    this.loadBestScore();
+    this.paused = false;
+    this.hasGameEnded = false;
   }
 
   /**
-   * Get current score
+   * Reset the runtime state and optionally wipe the persisted best score
+   */
+  reset(options: { clearBestScore?: boolean } = {}): void {
+    this.initialize();
+
+    if (options.clearBestScore) {
+      this.bestScoreValue = 0;
+      try {
+        localStorage.removeItem(this.BEST_SCORE_KEY);
+      } catch (error) {
+        console.warn('Failed to clear best score from localStorage', error);
+      }
+    }
+  }
+
+  /**
+   * Current score helpers (method for backwards compatibility + getter for new API)
    */
   getScore(): number {
     return this.score;
   }
 
+  get currentScore(): number {
+    return this.score;
+  }
+
   /**
-   * Get current level
+   * Level helpers
    */
   getLevel(): number {
     return this.level;
   }
 
+  get currentLevel(): number {
+    return this.level;
+  }
+
   /**
-   * Get best score
+   * Best score helpers (method + property)
    */
   getBestScore(): number {
-    return this.bestScore;
+    return this.bestScoreValue;
+  }
+
+  get bestScore(): number {
+    return this.bestScoreValue;
   }
 
   /**
-   * Update score and check if it's a new best
+   * Update routines
    */
-  updateScore(points: number): void {
+  addScore(points: number): void {
     this.score += points;
-
-    if (this.score > this.bestScore) {
-      this.bestScore = this.score;
-      this.saveBestScore();
-    }
+    this.updateBestScoreFromCurrent();
+    eventBus.emit(GameEvents.SCORE_CHANGED, this.score);
   }
 
-  /**
-   * Set score directly (for testing or special cases)
-   */
+  updateScore(points: number): void {
+    this.addScore(points);
+  }
+
   setScore(score: number): void {
     this.score = score;
-
-    if (this.score > this.bestScore) {
-      this.bestScore = this.score;
-      this.saveBestScore();
-    }
+    this.updateBestScoreFromCurrent();
+    eventBus.emit(GameEvents.SCORE_CHANGED, this.score);
   }
 
-  /**
-   * Advance to next level
-   */
   nextLevel(): void {
-    this.level++;
+    this.setLevel(this.level + 1);
   }
 
-  /**
-   * Set level directly
-   */
   setLevel(level: number): void {
     this.level = level;
+    eventBus.emit(GameEvents.LEVEL_CHANGED, this.level);
+  }
+
+  /**
+   * Pause helpers used by the GameScene
+   */
+  togglePause(): void {
+    this.paused = !this.paused;
+    eventBus.emit(this.paused ? GameEvents.GAME_PAUSED : GameEvents.GAME_RESUMED);
+  }
+
+  get isPaused(): boolean {
+    return this.paused;
+  }
+
+  /**
+   * Game over handler ensures best score persistence and single emission
+   */
+  gameOver(): void {
+    if (this.hasGameEnded) {
+      return;
+    }
+
+    this.hasGameEnded = true;
+    this.paused = true;
+    this.updateBestScoreFromCurrent();
+    eventBus.emit(GameEvents.GAME_OVER, {
+      score: this.score,
+      bestScore: this.bestScoreValue,
+    });
   }
 
   /**
@@ -85,10 +153,11 @@ export class GameState {
   private loadBestScore(): void {
     try {
       const stored = localStorage.getItem(this.BEST_SCORE_KEY);
-      this.bestScore = stored ? parseInt(stored, 10) : 0;
+      const parsed = stored ? parseInt(stored, 10) : 0;
+      this.bestScoreValue = isNaN(parsed) ? 0 : parsed;
     } catch (error) {
       console.warn('Failed to load best score from localStorage', error);
-      this.bestScore = 0;
+      this.bestScoreValue = 0;
     }
   }
 
@@ -97,23 +166,16 @@ export class GameState {
    */
   private saveBestScore(): void {
     try {
-      localStorage.setItem(this.BEST_SCORE_KEY, this.bestScore.toString());
+      localStorage.setItem(this.BEST_SCORE_KEY, this.bestScoreValue.toString());
     } catch (error) {
       console.warn('Failed to save best score to localStorage', error);
     }
   }
 
-  /**
-   * Reset all state including best score
-   */
-  reset(): void {
-    this.score = 0;
-    this.level = 1;
-    this.bestScore = 0;
-    try {
-      localStorage.removeItem(this.BEST_SCORE_KEY);
-    } catch (error) {
-      console.warn('Failed to clear best score from localStorage', error);
+  private updateBestScoreFromCurrent(): void {
+    if (this.score > this.bestScoreValue) {
+      this.bestScoreValue = this.score;
+      this.saveBestScore();
     }
   }
 }
