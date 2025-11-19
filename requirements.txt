@@ -1,0 +1,13 @@
+# Vercel Serverless Function Requirements
+# This file is used by Vercel to install Python dependencies for serverless functions
+
+# ASGI adapter for serverless platforms (required for Vercel)
+mangum==0.17.0
+
+# Main backend dependencies
+fastapi==0.109.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Note: uvicorn is not needed for serverless deployment
+# Vercel handles the ASGI server through mangum

@@ -125,33 +125,39 @@ pytest
 
 ## Deployment
 
-### Frontend Deployment (Vercel)
+### 🚀 One-Click Deployment to Vercel (Recommended)
 
-The frontend is configured for automatic deployment to Vercel:
+**Both frontend AND backend deploy together on Vercel!** No need for separate services.
 
-1. Connect your GitHub repository to Vercel
-2. Configure the project:
-   - **Root Directory:** `frontend`
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-3. Deploy! Vercel will automatically deploy on every push to the main branch.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
 
-### Backend Deployment (Render / Generic PaaS)
+#### Quick Deploy Steps:
 
-The backend can be deployed to any Python-compatible PaaS:
+1. **Push to GitHub** (if not already done)
+2. **Go to [vercel.com/new](https://vercel.com/new)**
+3. **Import your repository**
+4. **Click Deploy** - That's it!
 
-**For Render:**
-1. Create a new Web Service
-2. Connect your GitHub repository
-3. Configure:
-   - **Root Directory:** `backend`
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
+Vercel will automatically:
+- ✅ Build the frontend (Vite + Phaser)
+- ✅ Deploy backend as serverless functions (FastAPI)
+- ✅ Set up HTTPS with custom domain
+- ✅ Configure global CDN
+- ✅ Enable automatic deployments on push
 
-**For other platforms:**
-- Ensure the service runs `uvicorn backend.main:app`
-- Set environment variables as needed
-- Configure health check endpoint: `/health` or `/docs`
+**Your game will be live at:** `https://your-project.vercel.app`
+
+**API endpoints will be at:** `https://your-project.vercel.app/api/*`
+
+#### Why Vercel for Everything?
+
+- Single platform for frontend + backend
+- No CORS issues (same domain)
+- Automatic HTTPS and CDN
+- Generous free tier
+- Zero configuration needed
+
+📖 **Detailed deployment guide:** See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for complete instructions, troubleshooting, and advanced configuration.
 
 ## Features
 

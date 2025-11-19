@@ -529,13 +529,139 @@ Environment Variables:
 
 ---
 
+## 🚀 Vercel Deployment Configuration (Latest Update)
+
+### Complete Single-Platform Deployment
+
+**NEW:** The project now supports **complete deployment on Vercel** - both frontend AND backend together!
+
+#### What Changed
+
+Previously, the project documentation suggested deploying:
+- Frontend → Vercel
+- Backend → Render/Heroku (separate service)
+
+**Now:** Everything deploys to Vercel using serverless functions!
+
+#### New Files Added
+
+1. **`vercel.json`** - Deployment configuration
+   ```json
+   {
+     "buildCommand": "cd frontend && npm install && npm run build",
+     "outputDirectory": "frontend/dist",
+     "rewrites": [
+       { "source": "/api/(.*)", "destination": "/api/index.py" },
+       { "source": "/(.*)", "destination": "/index.html" }
+     ]
+   }
+   ```
+
+2. **`api/index.py`** - Serverless function entry point
+   ```python
+   from backend.backend.main import app
+   from mangum import Mangum
+
+   handler = Mangum(app, lifespan="off")
+   ```
+
+3. **`requirements.txt`** - Python dependencies for serverless functions
+   ```
+   mangum==0.17.0
+   fastapi==0.109.0
+   pydantic==2.5.3
+   ```
+
+4. **`VERCEL_DEPLOYMENT.md`** - Complete deployment guide (660+ lines)
+   - Step-by-step instructions
+   - Troubleshooting guide
+   - Resource limits and monitoring
+   - Custom domain setup
+
+5. **`.vercelignore`** - Deployment optimization
+   - Excludes test files, docs, and dev files
+   - Reduces deployment size
+   - Faster builds
+
+#### Updated Files
+
+1. **`frontend/src/services/api.ts`** - Now uses relative URLs
+   ```typescript
+   const API_BASE_URL = '/api';  // Same domain!
+
+   // Real API calls instead of mocks
+   await fetch(`${API_BASE_URL}/highscores`, { ... })
+   ```
+
+2. **`README.md`** - Updated deployment section
+   - Vercel-first approach
+   - One-click deploy button
+   - Simplified instructions
+
+#### Benefits
+
+✅ **Single Platform**
+- No need to manage multiple services
+- One deployment, one URL
+- Simplified configuration
+
+✅ **No CORS Issues**
+- Frontend and backend on same domain
+- No complex CORS configuration needed
+- Cleaner API calls
+
+✅ **Serverless Backend**
+- Scales automatically
+- Pay per use (free tier generous)
+- No server management
+
+✅ **One-Click Deploy**
+- Push to GitHub → Import to Vercel → Done
+- Automatic deployments on every push
+- Preview deployments for PRs
+
+✅ **Production Ready**
+- Automatic HTTPS
+- Global CDN
+- DDoS protection included
+
+#### Deployment URLs
+
+After deploying to Vercel:
+```
+https://your-game.vercel.app/
+├── /                    → Frontend (Phaser game)
+├── /api/health          → Backend health check
+├── /api/highscores      → Highscores API
+├── /api/rooms           → Rooms API
+└── /api/docs            → Interactive API docs (Swagger)
+```
+
+#### Resource Requirements
+
+**Free Tier Includes:**
+- Unlimited deployments
+- 100 GB bandwidth/month
+- 100 GB-hours serverless execution
+- Automatic SSL
+- Global CDN
+
+**Perfect for:**
+- Personal projects
+- Portfolios
+- Educational use
+- Small to medium traffic games
+
+---
+
 ## Recommendations
 
 ### Immediate Actions
 
 1. ✅ **Push Consolidated Branch**
    - All branches successfully merged
-   - Ready to push to remote
+   - Vercel configuration added
+   - Ready to deploy
 
 2. ✅ **CI/CD Verification**
    - GitHub Actions workflow configured
