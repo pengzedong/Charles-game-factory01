@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Environment
+.env
+.env.local
+.venv
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+coverage/
+htmlcov/
+.pytest_cache/
+.vitest/
+
+# Logs
+*.log
+logs/
+
+# Package lock files (keep only one)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Poetry
+poetry.lock
