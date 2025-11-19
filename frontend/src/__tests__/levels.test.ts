@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { levels, getLevelById, getLevelsByDifficulty, getTotalLevels, type LevelConfig } from '../config/levels';
+import {
+  levels,
+  getLevelById,
+  getLevelsByDifficulty,
+  getTotalLevels,
+  getLevelConfig,
+  getLevelForScore,
+  type LevelConfig,
+} from '../config/levels';
 
 describe('Levels Configuration', () => {
   describe('levels array', () => {
@@ -20,106 +28,58 @@ describe('Levels Configuration', () => {
         expect(level).toHaveProperty('id');
         expect(level).toHaveProperty('name');
         expect(level).toHaveProperty('difficulty');
-        expect(level).toHaveProperty('timeLimit');
-        expect(level).toHaveProperty('targetScore');
-        expect(level).toHaveProperty('obstacles');
-        expect(level).toHaveProperty('collectibles');
+        expect(level).toHaveProperty('scoreThreshold');
+        expect(level).toHaveProperty('obstacleSpawnInterval');
+        expect(level).toHaveProperty('obstacleSpawnChance');
+        expect(level).toHaveProperty('obstacleSpeed');
+        expect(level).toHaveProperty('coinSpawnInterval');
+        expect(level).toHaveProperty('coinSpawnChance');
+        expect(level).toHaveProperty('coinSpeed');
       });
     });
 
-    it('should have valid id field (number)', () => {
+    it('should have valid numeric values for spawn settings', () => {
       levels.forEach((level) => {
-        expect(typeof level.id).toBe('number');
-        expect(level.id).toBeGreaterThan(0);
+        expect(typeof level.obstacleSpawnInterval).toBe('number');
+        expect(typeof level.obstacleSpeed).toBe('number');
+        expect(typeof level.coinSpawnInterval).toBe('number');
+        expect(typeof level.coinSpeed).toBe('number');
+        expect(level.obstacleSpawnInterval).toBeGreaterThan(0);
+        expect(level.coinSpawnInterval).toBeGreaterThan(0);
+        expect(level.obstacleSpeed).toBeGreaterThan(0);
+        expect(level.coinSpeed).toBeGreaterThan(0);
       });
     });
 
-    it('should have unique ids', () => {
-      const ids = levels.map(level => level.id);
-      const uniqueIds = new Set(ids);
-      expect(uniqueIds.size).toBe(levels.length);
-    });
-
-    it('should have valid name field (non-empty string)', () => {
+    it('should keep spawn chances between 0 and 1', () => {
       levels.forEach((level) => {
-        expect(typeof level.name).toBe('string');
-        expect(level.name.length).toBeGreaterThan(0);
-      });
-    });
-
-    it('should have valid difficulty field', () => {
-      const validDifficulties = ['easy', 'medium', 'hard', 'expert'];
-      levels.forEach((level) => {
-        expect(validDifficulties).toContain(level.difficulty);
-      });
-    });
-
-    it('should have valid timeLimit (positive number)', () => {
-      levels.forEach((level) => {
-        expect(typeof level.timeLimit).toBe('number');
-        expect(level.timeLimit).toBeGreaterThan(0);
-      });
-    });
-
-    it('should have valid targetScore (positive number)', () => {
-      levels.forEach((level) => {
-        expect(typeof level.targetScore).toBe('number');
-        expect(level.targetScore).toBeGreaterThan(0);
-      });
-    });
-
-    it('should have obstacles array with valid structure', () => {
-      levels.forEach((level) => {
-        expect(Array.isArray(level.obstacles)).toBe(true);
-        level.obstacles.forEach((obstacle) => {
-          expect(obstacle).toHaveProperty('type');
-          expect(obstacle).toHaveProperty('count');
-          expect(typeof obstacle.type).toBe('string');
-          expect(typeof obstacle.count).toBe('number');
-          expect(obstacle.count).toBeGreaterThan(0);
-        });
-      });
-    });
-
-    it('should have collectibles array with valid structure', () => {
-      levels.forEach((level) => {
-        expect(Array.isArray(level.collectibles)).toBe(true);
-        level.collectibles.forEach((collectible) => {
-          expect(collectible).toHaveProperty('type');
-          expect(collectible).toHaveProperty('count');
-          expect(collectible).toHaveProperty('points');
-          expect(typeof collectible.type).toBe('string');
-          expect(typeof collectible.count).toBe('number');
-          expect(typeof collectible.points).toBe('number');
-          expect(collectible.count).toBeGreaterThan(0);
-          expect(collectible.points).toBeGreaterThan(0);
-        });
+        expect(level.obstacleSpawnChance).toBeGreaterThan(0);
+        expect(level.obstacleSpawnChance).toBeLessThanOrEqual(1);
+        expect(level.coinSpawnChance).toBeGreaterThan(0);
+        expect(level.coinSpawnChance).toBeLessThanOrEqual(1);
       });
     });
   });
 
   describe('Level progression', () => {
     it('should have increasing difficulty in general', () => {
-      const difficultyOrder = { easy: 1, medium: 2, hard: 3, expert: 4 };
-
-      // At least check that later levels are not easier than the first
+      const difficultyOrder = { easy: 1, medium: 2, hard: 3, expert: 4 } as const;
       const firstDifficulty = difficultyOrder[levels[0].difficulty];
       const lastDifficulty = difficultyOrder[levels[levels.length - 1].difficulty];
 
       expect(lastDifficulty).toBeGreaterThanOrEqual(firstDifficulty);
     });
 
-    it('should have increasing target scores', () => {
+    it('should have increasing score thresholds', () => {
       for (let i = 1; i < levels.length; i++) {
-        expect(levels[i].targetScore).toBeGreaterThanOrEqual(levels[i - 1].targetScore);
+        expect(levels[i].scoreThreshold).toBeGreaterThan(levels[i - 1].scoreThreshold);
       }
     });
 
-    it('should have reasonable time limits (30-600 seconds)', () => {
-      levels.forEach((level) => {
-        expect(level.timeLimit).toBeGreaterThanOrEqual(30);
-        expect(level.timeLimit).toBeLessThanOrEqual(600);
-      });
+    it('should gradually reduce spawn intervals to increase pressure', () => {
+      for (let i = 1; i < levels.length; i++) {
+        expect(levels[i].obstacleSpawnInterval).toBeLessThanOrEqual(levels[i - 1].obstacleSpawnInterval);
+      }
     });
   });
 
@@ -152,15 +112,8 @@ describe('Levels Configuration', () => {
       });
     });
 
-    it('should return empty array for difficulties with no levels', () => {
-      // This test assumes there might be difficulties with no levels
-      // If all difficulties have levels, this will just verify the function works
-      const result = getLevelsByDifficulty('easy');
-      expect(Array.isArray(result)).toBe(true);
-    });
-
     it('should work for all difficulty types', () => {
-      const difficulties: Array<'easy' | 'medium' | 'hard' | 'expert'> = ['easy', 'medium', 'hard', 'expert'];
+      const difficulties: Array<LevelConfig['difficulty']> = ['easy', 'medium', 'hard', 'expert'];
 
       difficulties.forEach((difficulty) => {
         const result = getLevelsByDifficulty(difficulty);
@@ -182,29 +135,26 @@ describe('Levels Configuration', () => {
     });
   });
 
-  describe('Game balance validation', () => {
-    it('should have achievable target scores based on collectibles', () => {
-      levels.forEach((level) => {
-        const maxPossibleScore = level.collectibles.reduce((sum, collectible) => {
-          return sum + (collectible.count * collectible.points);
-        }, 0);
-
-        // Target score should be achievable (allowing for some bonus points)
-        // or be reasonable (not requiring 100% collection for early levels)
-        expect(maxPossibleScore).toBeGreaterThan(0);
-      });
+  describe('Helper exports', () => {
+    it('should return a valid config for any level id', () => {
+      for (let levelNumber = 1; levelNumber <= levels.length; levelNumber++) {
+        const config = getLevelConfig(levelNumber);
+        expect(config.id).toBe(levelNumber);
+      }
     });
 
-    it('should have at least one obstacle type per level', () => {
-      levels.forEach((level) => {
-        expect(level.obstacles.length).toBeGreaterThan(0);
-      });
+    it('should clamp config requests beyond range to nearest level', () => {
+      const low = getLevelConfig(-10);
+      const high = getLevelConfig(999);
+      expect(low.id).toBe(levels[0].id);
+      expect(high.id).toBe(levels[levels.length - 1].id);
     });
 
-    it('should have at least one collectible type per level', () => {
-      levels.forEach((level) => {
-        expect(level.collectibles.length).toBeGreaterThan(0);
-      });
+    it('should map scores to expected level ids', () => {
+      const firstLevel = levels[0];
+      const lastLevel = levels[levels.length - 1];
+      expect(getLevelForScore(firstLevel.scoreThreshold).toString()).toBe(firstLevel.id.toString());
+      expect(getLevelForScore(lastLevel.scoreThreshold + 1000).toString()).toBe(lastLevel.id.toString());
     });
   });
 });

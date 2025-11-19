@@ -23,10 +23,12 @@ export class GameScene extends Phaser.Scene {
   private pauseKey?: Phaser.Input.Keyboard.Key;
   private pauseKey2?: Phaser.Input.Keyboard.Key;
   private pauseText?: Phaser.GameObjects.Text;
+  private scoreChangedHandler: () => void;
 
   constructor() {
     super({ key: 'GameScene' });
     this.gameState = GameState.getInstance();
+    this.scoreChangedHandler = this.checkLevelAdvancement.bind(this);
   }
 
   create(): void {
@@ -93,7 +95,7 @@ export class GameScene extends Phaser.Scene {
     this.pauseText.setVisible(false);
 
     // Listen to score changes to check for level advancement
-    eventBus.on(GameEvents.SCORE_CHANGED, this.checkLevelAdvancement.bind(this));
+    eventBus.on(GameEvents.SCORE_CHANGED, this.scoreChangedHandler);
   }
 
   update(): void {
@@ -157,6 +159,9 @@ export class GameScene extends Phaser.Scene {
     // Player hit animation
     (player as Player).hit();
 
+    // Remove obstacle instance to avoid duplicate collisions
+    (obstacle as Obstacle).destroy();
+
     // Game over
     this.gameState.gameOver();
 
@@ -175,6 +180,11 @@ export class GameScene extends Phaser.Scene {
 
     // Collect coin
     (coin as Coin).collect();
+
+    // Brief glow on the player to indicate success
+    const typedPlayer = player as Player;
+    typedPlayer.setTint(0xffff99);
+    this.time.delayedCall(120, () => typedPlayer.clearTint());
 
     // Add score
     this.gameState.addScore(10);
@@ -250,6 +260,8 @@ export class GameScene extends Phaser.Scene {
 
   shutdown(): void {
     // Clean up event listeners
-    eventBus.off(GameEvents.SCORE_CHANGED, this.checkLevelAdvancement.bind(this));
+    eventBus.off(GameEvents.SCORE_CHANGED, this.scoreChangedHandler);
+    this.hud?.destroy();
+    this.hud = undefined;
   }
 }

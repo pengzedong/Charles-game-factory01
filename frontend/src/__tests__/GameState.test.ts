@@ -135,7 +135,7 @@ describe('GameState', () => {
   });
 
   describe('Reset Functionality', () => {
-    it('should reset score and level to initial values', () => {
+    it('should reset score/level but keep best score by default', () => {
       gameState.setScore(500);
       gameState.setLevel(5);
 
@@ -143,16 +143,17 @@ describe('GameState', () => {
 
       expect(gameState.getScore()).toBe(0);
       expect(gameState.getLevel()).toBe(1);
-      expect(gameState.getBestScore()).toBe(0);
+      expect(gameState.getBestScore()).toBe(500);
     });
 
-    it('should clear best score from localStorage on reset', () => {
+    it('should clear best score from localStorage when requested', () => {
       gameState.updateScore(300);
       expect(localStorage.getItem('key-dash-adventure-best-score')).toBe('300');
 
-      gameState.reset();
+      gameState.reset({ clearBestScore: true });
 
       expect(localStorage.getItem('key-dash-adventure-best-score')).toBeNull();
+      expect(gameState.getBestScore()).toBe(0);
     });
   });
 
