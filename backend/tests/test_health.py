@@ -1,38 +1,46 @@
-"""Tests for health check endpoints."""
+"""
+Tests for health check endpoint
+"""
+import pytest
 from fastapi.testclient import TestClient
 
 
-def test_health_check(client: TestClient) -> None:
-    """Test that GET /api/health returns status 200 and correct data.
+def test_health_check_returns_200(client: TestClient):
+    """Test that health endpoint returns status 200"""
+    response = client.get("/health")
+    assert response.status_code == 200
 
-    Args:
-        client: FastAPI test client fixture.
-    """
-    response = client.get("/api/health")
+
+def test_health_check_returns_json(client: TestClient):
+    """Test that health endpoint returns JSON response"""
+    response = client.get("/health")
+    assert response.headers["content-type"] == "application/json"
+
+
+def test_health_check_has_status_ok(client: TestClient):
+    """Test that health endpoint returns status: ok"""
+    response = client.get("/health")
+    data = response.json()
+    assert "status" in data
+    assert data["status"] == "ok"
+
+
+def test_health_check_has_timestamp(client: TestClient):
+    """Test that health endpoint includes a timestamp"""
+    response = client.get("/health")
+    data = response.json()
+    assert "timestamp" in data
+    assert isinstance(data["timestamp"], str)
+    assert len(data["timestamp"]) > 0
+
+
+def test_health_check_response_structure(client: TestClient):
+    """Test the complete response structure of health endpoint"""
+    response = client.get("/health")
 
     assert response.status_code == 200
 
     data = response.json()
     assert "status" in data
+    assert "timestamp" in data
     assert data["status"] == "ok"
-    assert "version" in data
-    assert "app_name" in data
-    assert data["app_name"] == "Key Dash Adventure API"
-
-
-def test_root_endpoint(client: TestClient) -> None:
-    """Test that the root endpoint returns welcome message.
-
-    Args:
-        client: FastAPI test client fixture.
-    """
-    response = client.get("/")
-
-    assert response.status_code == 200
-
-    data = response.json()
-    assert "message" in data
-    assert "version" in data
-    assert "docs" in data
-    assert "health" in data
-    assert data["health"] == "/api/health"
