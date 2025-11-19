@@ -7,6 +7,7 @@ mangum==0.17.0
 # Main backend dependencies
 fastapi==0.109.0
 pydantic==2.5.3
+pydantic-settings==2.1.0
 
 # Note: uvicorn is not needed for serverless deployment
 # Vercel handles the ASGI server through mangum
