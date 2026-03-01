@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   levels,
-  getLevelById,
-  getLevelsByDifficulty,
   getTotalLevels,
   getLevelConfig,
   getLevelForScore,
-  type LevelConfig,
 } from '../config/levels';
 
 describe('Levels Configuration', () => {
@@ -80,48 +77,6 @@ describe('Levels Configuration', () => {
       for (let i = 1; i < levels.length; i++) {
         expect(levels[i].obstacleSpawnInterval).toBeLessThanOrEqual(levels[i - 1].obstacleSpawnInterval);
       }
-    });
-  });
-
-  describe('getLevelById function', () => {
-    it('should return correct level when given valid id', () => {
-      const level = getLevelById(1);
-      expect(level).toBeDefined();
-      expect(level?.id).toBe(1);
-    });
-
-    it('should return undefined for non-existent id', () => {
-      const level = getLevelById(9999);
-      expect(level).toBeUndefined();
-    });
-
-    it('should return all levels by their ids', () => {
-      levels.forEach((expectedLevel) => {
-        const level = getLevelById(expectedLevel.id);
-        expect(level).toEqual(expectedLevel);
-      });
-    });
-  });
-
-  describe('getLevelsByDifficulty function', () => {
-    it('should return levels with matching difficulty', () => {
-      const easyLevels = getLevelsByDifficulty('easy');
-      expect(Array.isArray(easyLevels)).toBe(true);
-      easyLevels.forEach((level) => {
-        expect(level.difficulty).toBe('easy');
-      });
-    });
-
-    it('should work for all difficulty types', () => {
-      const difficulties: Array<LevelConfig['difficulty']> = ['easy', 'medium', 'hard', 'expert'];
-
-      difficulties.forEach((difficulty) => {
-        const result = getLevelsByDifficulty(difficulty);
-        expect(Array.isArray(result)).toBe(true);
-        result.forEach((level) => {
-          expect(level.difficulty).toBe(difficulty);
-        });
-      });
     });
   });
 

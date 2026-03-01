@@ -113,11 +113,9 @@ export function getLevelConfig(level: number): LevelConfig {
 }
 
 export function getLevelForScore(score: number): number {
-  const sorted = [...levelConfigs].sort((a, b) => a.scoreThreshold - b.scoreThreshold);
+  let currentLevel = levelConfigs[0].id;
 
-  let currentLevel = sorted[0].id;
-
-  for (const config of sorted) {
+  for (const config of levelConfigs) {
     if (score >= config.scoreThreshold) {
       currentLevel = config.id;
     } else {
@@ -126,14 +124,6 @@ export function getLevelForScore(score: number): number {
   }
 
   return currentLevel;
-}
-
-export function getLevelById(id: number): LevelConfig | undefined {
-  return levelConfigs.find(level => level.id === id);
-}
-
-export function getLevelsByDifficulty(difficulty: LevelConfig['difficulty']): LevelConfig[] {
-  return levelConfigs.filter(level => level.difficulty === difficulty);
 }
 
 export function getTotalLevels(): number {

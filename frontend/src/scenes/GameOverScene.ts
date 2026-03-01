@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 import { GameState } from '../core/GameState';
+import { fetchHighscores, submitHighscore } from '../services/api';
 
 /**
  * Game over scene
- * Displays final score, best score, and restart option
+ * Displays final score, best score, leaderboard, and restart option
  */
 export class GameOverScene extends Phaser.Scene {
   private gameState: GameState;
-  private restartKey?: Phaser.Input.Keyboard.Key;
+  private started: boolean = false;
 
   constructor() {
     super({ key: 'GameOverScene' });
@@ -15,6 +16,7 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.started = false;
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
@@ -23,17 +25,26 @@ export class GameOverScene extends Phaser.Scene {
     bg.setOrigin(0, 0);
 
     // Game Over title
-    const gameOverText = this.add.text(width / 2, height * 0.25, 'GAME OVER', {
+    const gameOverText = this.add.text(width / 2, height * 0.12, 'GAME OVER', {
       fontSize: '64px',
       color: '#ff4444',
       fontStyle: 'bold',
     });
     gameOverText.setOrigin(0.5);
 
+    // Animate title in
+    this.tweens.add({
+      targets: gameOverText,
+      scale: { from: 2, to: 1 },
+      alpha: { from: 0, to: 1 },
+      duration: 500,
+      ease: 'Back.easeOut',
+    });
+
     // Final score
     const scoreText = this.add.text(
       width / 2,
-      height * 0.4,
+      height * 0.25,
       `Score: ${this.gameState.currentScore}`,
       {
         fontSize: '36px',
@@ -45,7 +56,7 @@ export class GameOverScene extends Phaser.Scene {
     // Level reached
     const levelText = this.add.text(
       width / 2,
-      height * 0.5,
+      height * 0.33,
       `Level Reached: ${this.gameState.currentLevel}`,
       {
         fontSize: '28px',
@@ -61,7 +72,7 @@ export class GameOverScene extends Phaser.Scene {
 
     const bestScoreText = this.add.text(
       width / 2,
-      height * 0.65,
+      height * 0.43,
       `${bestScoreLabel}: ${this.gameState.bestScore}`,
       {
         fontSize: '32px',
@@ -71,7 +82,6 @@ export class GameOverScene extends Phaser.Scene {
     bestScoreText.setOrigin(0.5);
 
     if (isNewRecord) {
-      // Animate new record
       this.tweens.add({
         targets: bestScoreText,
         scale: 1.1,
@@ -81,10 +91,38 @@ export class GameOverScene extends Phaser.Scene {
       });
     }
 
+    // Leaderboard area
+    const leaderboardTitle = this.add.text(
+      width / 2,
+      height * 0.53,
+      'Global Top 5',
+      {
+        fontSize: '22px',
+        color: '#888888',
+      }
+    );
+    leaderboardTitle.setOrigin(0.5);
+
+    const leaderboardText = this.add.text(
+      width / 2,
+      height * 0.58,
+      'Loading...',
+      {
+        fontSize: '18px',
+        color: '#cccccc',
+        align: 'center',
+        lineSpacing: 6,
+      }
+    );
+    leaderboardText.setOrigin(0.5, 0);
+
+    // Submit score and fetch leaderboard (non-blocking)
+    this.loadLeaderboard(leaderboardText);
+
     // Restart prompt
     const restartText = this.add.text(
       width / 2,
-      height * 0.85,
+      height * 0.88,
       'Press ENTER to Restart\nPress M for Menu',
       {
         fontSize: '24px',
@@ -94,7 +132,6 @@ export class GameOverScene extends Phaser.Scene {
     );
     restartText.setOrigin(0.5);
 
-    // Blinking animation
     this.tweens.add({
       targets: restartText,
       alpha: 0.3,
@@ -104,27 +141,52 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     // Input
-    this.restartKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     const menuKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.M);
-
-    // Handle menu key
     menuKey?.on('down', () => {
+      if (this.started) return;
+      this.started = true;
       this.scene.start('MenuScene');
     });
 
-    // Also allow clicking to restart
     this.input.on('pointerdown', () => {
       this.restartGame();
     });
   }
 
   update(): void {
-    if (this.restartKey?.isDown) {
+    const enterKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    if (enterKey && Phaser.Input.Keyboard.JustDown(enterKey)) {
       this.restartGame();
     }
   }
 
   private restartGame(): void {
+    if (this.started) return;
+    this.started = true;
     this.scene.start('GameScene');
+  }
+
+  private async loadLeaderboard(leaderboardText: Phaser.GameObjects.Text): Promise<void> {
+    try {
+      if (this.gameState.currentScore > 0) {
+        await submitHighscore(this.gameState.currentScore);
+      }
+    } catch {
+      // Non-blocking
+    }
+
+    try {
+      const scores = await fetchHighscores(5);
+      if (scores.length > 0) {
+        const lines = scores.map(
+          (entry, i) => `${i + 1}. ${entry.playerName} - ${entry.score}`
+        );
+        leaderboardText.setText(lines.join('\n'));
+      } else {
+        leaderboardText.setText('No scores yet');
+      }
+    } catch {
+      leaderboardText.setText('Offline mode');
+    }
   }
 }

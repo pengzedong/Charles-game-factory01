@@ -1,14 +1,33 @@
+import Phaser from 'phaser';
+import { BootScene } from './scenes/BootScene';
+import { MenuScene } from './scenes/MenuScene';
+import { GameScene } from './scenes/GameScene';
+import { GameOverScene } from './scenes/GameOverScene';
+
 /**
- * Main entry point for Key Dash Adventure
+ * Key Dash Adventure - Main Entry Point
  */
-import { GameState } from './core/GameState';
-import { getTotalLevels } from './config/levels';
+const config: Phaser.Types.Core.GameConfig = {
+  type: Phaser.AUTO,
+  width: 800,
+  height: 600,
+  parent: 'app',
+  backgroundColor: '#1a1a2e',
+  physics: {
+    default: 'arcade',
+    arcade: {
+      gravity: { x: 0, y: 0 },
+      debug: false,
+    },
+  },
+  scene: [BootScene, MenuScene, GameScene, GameOverScene],
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  audio: {
+    disableWebAudio: false,
+  },
+};
 
-console.log('Key Dash Adventure');
-console.log(`Total levels: ${getTotalLevels()}`);
-
-// Initialize game state singleton
-const gameState = GameState.getInstance();
-gameState.initialize();
-
-console.log('Game initialized');
+new Phaser.Game(config);

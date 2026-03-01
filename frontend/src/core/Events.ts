@@ -9,6 +9,8 @@ export const GameEvents = {
   GAME_RESUMED: 'game-resumed',
   COIN_COLLECTED: 'coin-collected',
   PLAYER_HIT: 'player-hit',
+  COMBO_CHANGED: 'combo-changed',
+  NEAR_MISS: 'near-miss',
 } as const;
 
 export type GameEventType = typeof GameEvents[keyof typeof GameEvents];

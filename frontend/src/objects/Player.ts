@@ -20,21 +20,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Set up physics properties
     this.setCollideWorldBounds(true);
     this.setScale(1);
 
-    // Initialize input
     this.setupInput();
   }
 
   private setupInput(): void {
     if (!this.scene.input.keyboard) return;
 
-    // Arrow keys
     this.cursors = this.scene.input.keyboard.createCursorKeys();
 
-    // WASD keys
     this.wasd = {
       up: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
       down: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
@@ -46,27 +42,47 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   update(): void {
     if (!this.cursors || !this.wasd) return;
 
-    // Reset velocity
-    this.setVelocity(0);
+    let vx = 0;
+    let vy = 0;
 
     // Horizontal movement
     if (this.cursors.left.isDown || this.wasd.left.isDown) {
-      this.setVelocityX(-this.speed);
+      vx = -1;
     } else if (this.cursors.right.isDown || this.wasd.right.isDown) {
-      this.setVelocityX(this.speed);
+      vx = 1;
     }
 
     // Vertical movement
     if (this.cursors.up.isDown || this.wasd.up.isDown) {
-      this.setVelocityY(-this.speed);
+      vy = -1;
     } else if (this.cursors.down.isDown || this.wasd.down.isDown) {
-      this.setVelocityY(this.speed);
+      vy = 1;
     }
+
+    // Normalize diagonal movement so it's not 41% faster
+    if (vx !== 0 && vy !== 0) {
+      const factor = Math.SQRT1_2; // 1/sqrt(2)
+      vx *= factor;
+      vy *= factor;
+    }
+
+    this.setVelocity(vx * this.speed, vy * this.speed);
+
+    // Tilt when moving horizontally
+    this.setRotation(vx * 0.15);
   }
 
   hit(): void {
-    // Visual feedback when hit
-    this.setTint(0xff0000);
-    this.scene.cameras.main.shake(200, 0.01);
+    // White flash then red tint, auto-clear
+    this.setTint(0xffffff);
+    this.scene.time.delayedCall(80, () => {
+      this.setTint(0xff0000);
+      this.scene.time.delayedCall(400, () => {
+        this.clearTint();
+      });
+    });
+
+    this.scene.cameras.main.shake(300, 0.03);
+    this.scene.cameras.main.flash(150, 255, 50, 50);
   }
 }

@@ -13,6 +13,10 @@ export class GameState {
   private hasGameEnded = false;
   private readonly BEST_SCORE_KEY = 'key-dash-adventure-best-score';
 
+  // Combo system
+  private comboStreak = 0;
+  private comboMultiplierValue = 1;
+
   constructor(registerAsSingleton = true) {
     this.loadBestScore();
 
@@ -21,9 +25,6 @@ export class GameState {
     }
   }
 
-  /**
-   * Access the shared singleton instance that gameplay scenes consume
-   */
   static getInstance(): GameState {
     if (!GameState.instance) {
       GameState.instance = new GameState();
@@ -31,19 +32,15 @@ export class GameState {
     return GameState.instance;
   }
 
-  /**
-   * Initialize a fresh run without touching best score persistence
-   */
   initialize(startingLevel: number = 1): void {
     this.score = 0;
     this.level = startingLevel;
     this.paused = false;
     this.hasGameEnded = false;
+    this.comboStreak = 0;
+    this.comboMultiplierValue = 1;
   }
 
-  /**
-   * Reset the runtime state and optionally wipe the persisted best score
-   */
   reset(options: { clearBestScore?: boolean } = {}): void {
     this.initialize();
 
@@ -57,9 +54,6 @@ export class GameState {
     }
   }
 
-  /**
-   * Current score helpers (method for backwards compatibility + getter for new API)
-   */
   getScore(): number {
     return this.score;
   }
@@ -68,9 +62,6 @@ export class GameState {
     return this.score;
   }
 
-  /**
-   * Level helpers
-   */
   getLevel(): number {
     return this.level;
   }
@@ -79,9 +70,6 @@ export class GameState {
     return this.level;
   }
 
-  /**
-   * Best score helpers (method + property)
-   */
   getBestScore(): number {
     return this.bestScoreValue;
   }
@@ -90,11 +78,42 @@ export class GameState {
     return this.bestScoreValue;
   }
 
+  get comboMultiplier(): number {
+    return this.comboMultiplierValue;
+  }
+
+  get combo(): number {
+    return this.comboStreak;
+  }
+
   /**
-   * Update routines
+   * Increment combo streak on coin collection
    */
+  incrementCombo(): void {
+    this.comboStreak++;
+    // Multiplier: 1x, 1.5x, 2x, 2.5x, 3x (caps at 3x)
+    this.comboMultiplierValue = Math.min(1 + Math.floor(this.comboStreak / 3) * 0.5, 3);
+    eventBus.emit(GameEvents.COMBO_CHANGED, {
+      streak: this.comboStreak,
+      multiplier: this.comboMultiplierValue,
+    });
+  }
+
+  /**
+   * Reset combo on hit
+   */
+  resetCombo(): void {
+    this.comboStreak = 0;
+    this.comboMultiplierValue = 1;
+    eventBus.emit(GameEvents.COMBO_CHANGED, {
+      streak: 0,
+      multiplier: 1,
+    });
+  }
+
   addScore(points: number): void {
-    this.score += points;
+    const actualPoints = Math.floor(points * this.comboMultiplierValue);
+    this.score += actualPoints;
     this.updateBestScoreFromCurrent();
     eventBus.emit(GameEvents.SCORE_CHANGED, this.score);
   }
@@ -118,9 +137,6 @@ export class GameState {
     eventBus.emit(GameEvents.LEVEL_CHANGED, this.level);
   }
 
-  /**
-   * Pause helpers used by the GameScene
-   */
   togglePause(): void {
     this.paused = !this.paused;
     eventBus.emit(this.paused ? GameEvents.GAME_PAUSED : GameEvents.GAME_RESUMED);
@@ -130,9 +146,6 @@ export class GameState {
     return this.paused;
   }
 
-  /**
-   * Game over handler ensures best score persistence and single emission
-   */
   gameOver(): void {
     if (this.hasGameEnded) {
       return;
@@ -147,9 +160,6 @@ export class GameState {
     });
   }
 
-  /**
-   * Load best score from localStorage
-   */
   private loadBestScore(): void {
     try {
       const stored = localStorage.getItem(this.BEST_SCORE_KEY);
@@ -161,9 +171,6 @@ export class GameState {
     }
   }
 
-  /**
-   * Save best score to localStorage
-   */
   private saveBestScore(): void {
     try {
       localStorage.setItem(this.BEST_SCORE_KEY, this.bestScoreValue.toString());
